@@ -1,0 +1,7 @@
+[package]
+name = "plume-markdown"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+plume-core.workspace = true
