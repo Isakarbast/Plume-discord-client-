@@ -21,6 +21,10 @@ pub enum RestError {
     #[error("still rate limited after several retries")]
     RateLimited,
 
+    /// Something went wrong on our side before anything was sent.
+    #[error("{0}")]
+    Local(String),
+
     #[error("Discord returned {status}: {message}")]
     Api { status: StatusCode, message: String },
 }

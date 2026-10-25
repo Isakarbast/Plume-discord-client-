@@ -6,6 +6,7 @@
 //!     plume-tui logout          forget the saved token
 
 mod app;
+mod emoji;
 mod input;
 mod layout;
 mod login;
@@ -30,6 +31,7 @@ Options:
   --profile <name>   feather (default), standard or full: how many
                      channels and messages to keep in memory
   --silent-typing    don't tell others when you're typing
+  --no-notifications don't show desktop notifications
   --help             show this help
 
 Logs go to ~/.local/state/plume/plume-tui.log (set RUST_LOG=debug for more).";
@@ -38,6 +40,7 @@ Logs go to ~/.local/state/plume/plume-tui.log (set RUST_LOG=debug for more).";
 pub struct Options {
     pub profile: Profile,
     pub silent_typing: bool,
+    pub notifications: bool,
 }
 
 // One thread is plenty for a chat client and keeps memory low (Feather).
@@ -77,16 +80,19 @@ fn parse_options(args: &[String]) -> Result<Options, String> {
     let mut options = Options {
         profile: Profile::FEATHER,
         silent_typing: false,
+        notifications: true,
     };
     let mut args = args.iter();
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--profile" => {
                 let name = args.next().ok_or("--profile needs a name")?;
-                options.profile = Profile::from_name(name)
-                    .ok_or_else(|| format!("unknown profile `{name}` (try feather, standard or full)"))?;
+                options.profile = Profile::from_name(name).ok_or_else(|| {
+                    format!("unknown profile `{name}` (try feather, standard or full)")
+                })?;
             }
             "--silent-typing" => options.silent_typing = true,
+            "--no-notifications" => options.notifications = false,
             other => return Err(format!("unknown option `{other}`. See --help")),
         }
     }
@@ -102,12 +108,22 @@ fn init_logging() {
     let Ok(file) = std::fs::File::create(dir.join("plume-tui.log")) else {
         return;
     };
-    let filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
+    let filter =
+        tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into());
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_ansi(false)
         .with_writer(std::sync::Mutex::new(file))
         .init();
+}
+
+/// Where the Standard/Full tiers keep their SQLite cache.
+pub fn cache_path() -> Option<PathBuf> {
+    let base = match std::env::var_os("XDG_CACHE_HOME") {
+        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
+        _ => PathBuf::from(std::env::var_os("HOME")?).join(".cache"),
+    };
+    Some(base.join("plume").join("cache.sqlite"))
 }
 
 /// `$XDG_STATE_HOME/plume`, falling back to `~/.local/state/plume`.

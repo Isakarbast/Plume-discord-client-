@@ -1,0 +1,132 @@
+/* Plume's styling on top of libadwaita. Override anything here in
+   ~/.config/plume/style.css; these class names are kept stable. */
+
+.guild-rail { background: alpha(@window_fg_color, 0.03); }
+.guild-rail row { padding: 2px 8px; border-radius: 12px; }
+
+.unread-pill {
+  background: @window_fg_color;
+  min-width: 4px;
+  min-height: 10px;
+  border-radius: 0 4px 4px 0;
+}
+
+.badge {
+  background: @error_bg_color;
+  color: @error_fg_color;
+  border-radius: 99px;
+  padding: 0 6px;
+  min-width: 10px;
+  font-size: 0.75em;
+  font-weight: bold;
+}
+
+.unread { font-weight: bold; }
+
+.message-list { background: transparent; }
+.message-list > row { padding: 0; }
+.message-row { padding: 2px 16px; }
+.message-row.first-in-group { padding-top: 10px; }
+.message-row:hover { background: alpha(@view_fg_color, 0.04); }
+.message-row.mentioned {
+  background: alpha(#faa61a, 0.08);
+  box-shadow: inset 2px 0 #faa61a;
+}
+
+.day-separator { margin: 14px 16px 4px 16px; }
+
+.name-0 { color: #f47b67; }
+.name-1 { color: #57f287; }
+.name-2 { color: #fee75c; }
+.name-3 { color: #7ab4ff; }
+.name-4 { color: #eb459e; }
+.name-5 { color: #4fdcd8; }
+
+.code-block {
+  background: alpha(@view_fg_color, 0.06);
+  border: 1px solid alpha(@view_fg_color, 0.08);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 4px 0;
+}
+
+.embed {
+  background: alpha(@view_fg_color, 0.04);
+  border-radius: 4px;
+  box-shadow: inset 4px 0 #5865f2;
+  padding: 8px 12px 8px 16px;
+  margin: 4px 0;
+}
+
+.attachment-image { border-radius: 8px; margin: 4px 0; }
+
+.reaction {
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 0.9em;
+}
+.reaction.mine {
+  background: alpha(@accent_bg_color, 0.25);
+  box-shadow: inset 0 0 0 1px @accent_color;
+}
+
+.composer {
+  background: alpha(@view_fg_color, 0.06);
+  border-radius: 10px;
+  padding: 2px 4px;
+}
+.composer-text, .composer-text text { background: transparent; }
+.composer-context {
+  padding: 2px 8px;
+  border-radius: 8px 8px 0 0;
+  background: alpha(@accent_bg_color, 0.15);
+}
+
+.qr-code { border-radius: 12px; }
+
+.voice-panel {
+  padding: 8px 10px;
+  border-top: 1px solid alpha(@window_fg_color, 0.08);
+}
+.voice-status.connected { color: @success_color; }
+.voice-status.connecting { color: @warning_color; }
+.voice-member avatar { box-shadow: 0 0 0 2px transparent; border-radius: 99px; }
+.voice-member.speaking avatar { box-shadow: 0 0 0 2px @success_color; }
+.voice-member.speaking label { color: @success_color; }
+.profile-link:hover { text-decoration: underline; }
+
+/* Status dots on avatars */
+.status-dot {
+  min-width: 10px;
+  min-height: 10px;
+  border-radius: 99px;
+  border: 3px solid @sidebar_bg_color;
+}
+.status-online { background: #23a55a; }
+.status-idle { background: #f0b232; }
+.status-dnd { background: #f23f43; }
+.status-offline { background: #80848e; }
+
+.member-group { font-size: 0.8em; font-weight: bold; margin: 14px 12px 4px 12px; opacity: 0.7; }
+.member-offline { opacity: 0.45; }
+.user-panel { padding: 6px 8px; border-top: 1px solid alpha(@window_fg_color, 0.08); }
+.jumbo-emoji { margin: 2px 2px 2px 0; }
+.autocomplete row { padding: 4px 8px; }
+.search-result { padding: 8px 12px; }
+
+.hover-toolbar {
+  background: @popover_bg_color;
+  border: 1px solid alpha(@window_fg_color, 0.1);
+  border-radius: 6px;
+  margin-top: 2px;
+  padding: 0 2px;
+}
+.hover-toolbar button { min-width: 28px; min-height: 28px; padding: 2px; }
+.new-messages { color: #f23f43; font-size: 0.8em; font-weight: bold; }
+.new-messages separator { background: #f23f43; min-height: 1px; }
+.reply-ping { font-weight: bold; color: @accent_color; }
+.embed.embed-colored { box-shadow: none; border-radius: 0 4px 4px 0; }
+.gif-button { font-weight: 800; font-size: 0.75em; padding: 2px 6px; }
+.join-server { min-width: 48px; min-height: 48px; color: #23a55a; }
+.join-server:hover { background: #23a55a; color: white; }

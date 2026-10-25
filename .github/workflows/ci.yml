@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: GTK, libadwaita, ALSA and CMake (libopus is built from source)
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libadwaita-1-dev libasound2-dev cmake
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Formatting
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --workspace
+      - name: Feather size check
+        run: |
+          cargo build --profile feather -p plume-tui
+          size=$(stat -c %s target/feather/plume-tui)
+          echo "plume-tui: $((size / 1024)) KB"
+          test "$size" -lt $((8 * 1024 * 1024))

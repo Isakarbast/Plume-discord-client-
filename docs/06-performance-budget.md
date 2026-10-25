@@ -20,3 +20,11 @@ These are the success criteria per tier (see [11-usage-profiles.md](11-usage-pro
 - **Lazy loading:** member lists, guilds you haven't opened, the emoji catalog.
 - **No idle wakeups:** timers only for heartbeats and visible relative timestamps.
 - Profile with `heaptrack`, `perf`, and the GTK inspector. Track RSS per tier on every release.
+
+## Measured (October 2026)
+| | Binary | RSS |
+|---|---|---|
+| 🪶 `plume-tui` (`--profile feather`) | 5.3 MB | ~5 MB before login |
+| 💬 `plume` (GTK, release, with voice) | 14.9 MB | ~66 MB in `--demo` (Broadway, software rendering) |
+
+Numbers with a real, large account still need measuring; please add them here.

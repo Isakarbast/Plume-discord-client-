@@ -68,9 +68,10 @@ impl RateLimiter {
     /// Records the budget from a response's headers.
     pub fn update(&self, key: &str, headers: &HeaderMap) {
         let number = |name: &str| headers.get(name)?.to_str().ok()?.parse::<f64>().ok();
-        let (Some(remaining), Some(reset_after)) =
-            (number("x-ratelimit-remaining"), number("x-ratelimit-reset-after"))
-        else {
+        let (Some(remaining), Some(reset_after)) = (
+            number("x-ratelimit-remaining"),
+            number("x-ratelimit-reset-after"),
+        ) else {
             return;
         };
         let bucket = Bucket {
@@ -109,8 +110,14 @@ mod tests {
 
     fn headers(remaining: &str, reset_after: &str) -> HeaderMap {
         let mut headers = HeaderMap::new();
-        headers.insert("x-ratelimit-remaining", HeaderValue::from_str(remaining).unwrap());
-        headers.insert("x-ratelimit-reset-after", HeaderValue::from_str(reset_after).unwrap());
+        headers.insert(
+            "x-ratelimit-remaining",
+            HeaderValue::from_str(remaining).unwrap(),
+        );
+        headers.insert(
+            "x-ratelimit-reset-after",
+            HeaderValue::from_str(reset_after).unwrap(),
+        );
         headers
     }
 

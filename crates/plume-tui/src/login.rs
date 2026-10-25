@@ -6,13 +6,21 @@ use qrcode::render::unicode::Dense1x2;
 
 pub async fn logout() -> Result<(), Box<dyn std::error::Error>> {
     tokio::task::spawn_blocking(keyring::delete_token).await??;
-    println!("Logged out: removed the saved token from the keyring.");
+    // The cache holds your servers and messages; it goes too.
+    if let Some(path) = crate::cache_path() {
+        for suffix in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{}{suffix}", path.display()));
+        }
+    }
+    println!("Logged out: removed the saved token and the cache.");
     Ok(())
 }
 
 pub async fn login(use_token: bool) -> Result<(), Box<dyn std::error::Error>> {
     let token = if use_token {
-        token_from_env().ok_or("DISCORD_TOKEN is not set. Run: read -rs DISCORD_TOKEN && export DISCORD_TOKEN")?
+        token_from_env().ok_or(
+            "DISCORD_TOKEN is not set. Run: read -rs DISCORD_TOKEN && export DISCORD_TOKEN",
+        )?
     } else {
         println!("Setting up QR login...");
         let result = qr_login(|status| match status {
@@ -25,9 +33,11 @@ pub async fn login(use_token: bool) -> Result<(), Box<dyn std::error::Error>> {
         match result {
             Ok(token) => token,
             Err(AuthError::CaptchaRequired) => {
-                return Err("Discord wants a captcha for QR logins right now, and Plume doesn't solve \
+                return Err(
+                    "Discord wants a captcha for QR logins right now, and Plume doesn't solve \
                      those. Use `plume-tui login --token` instead (see the README)."
-                    .into());
+                        .into(),
+                );
             }
             Err(error) => return Err(error.into()),
         }

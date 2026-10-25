@@ -14,7 +14,10 @@ pub fn parse(input: &str) -> Vec<Node> {
     let mut out = Vec::new();
     let mut rest = input;
     while let Some((start, block, end)) = find_code_block(rest) {
-        lines(rest[..start].strip_suffix('\n').unwrap_or(&rest[..start]), &mut out);
+        lines(
+            rest[..start].strip_suffix('\n').unwrap_or(&rest[..start]),
+            &mut out,
+        );
         out.push(block);
         rest = &rest[end..];
         rest = rest.strip_prefix('\n').unwrap_or(rest);
@@ -36,7 +39,10 @@ fn find_code_block(s: &str) -> Option<(usize, Node, usize)> {
     // ```rust\n…``` — a lone word on the first line names the language.
     let (language, code) = match body.split_once('\n') {
         Some((first, code))
-            if !first.is_empty() && first.chars().all(|c| c.is_alphanumeric() || "+-#._".contains(c)) =>
+            if !first.is_empty()
+                && first
+                    .chars()
+                    .all(|c| c.is_alphanumeric() || "+-#._".contains(c)) =>
         {
             (Some(first.to_owned()), code)
         }
@@ -157,7 +163,9 @@ fn token(s: &str, prev: Option<char>) -> Option<(Node, usize)> {
     match s.as_bytes().first()? {
         b'`' => inline_code(s),
         b'|' => wrapped(s, "||", None).map(|(inner, used)| (Node::Spoiler(inline(inner)), used)),
-        b'~' => wrapped(s, "~~", None).map(|(inner, used)| (Node::Strikethrough(inline(inner)), used)),
+        b'~' => {
+            wrapped(s, "~~", None).map(|(inner, used)| (Node::Strikethrough(inline(inner)), used))
+        }
         b'*' => {
             if let Some((inner, used)) = wrapped(s, "***", Some('*')) {
                 return Some((Node::Bold(vec![Node::Italic(inline(inner))]), used));
@@ -298,7 +306,9 @@ fn link(s: &str) -> Option<(Node, usize)> {
     } else {
         return None;
     };
-    let end = s.find(|c: char| c.is_whitespace() || c == '<').unwrap_or(s.len());
+    let end = s
+        .find(|c: char| c.is_whitespace() || c == '<')
+        .unwrap_or(s.len());
     let mut url = &s[..end];
     // Keep a final `)` when it closes a `(` in the URL (Wikipedia links).
     while let Some(last) = url.chars().next_back() {
@@ -337,14 +347,21 @@ mod tests {
         assert_eq!(parse("__u__"), [Node::Underline(vec![text("u")])]);
         assert_eq!(parse("~~s~~"), [Node::Strikethrough(vec![text("s")])]);
         assert_eq!(parse("||secret||"), [Node::Spoiler(vec![text("secret")])]);
-        assert_eq!(parse("***bi***"), [Node::Bold(vec![Node::Italic(vec![text("bi")])])]);
+        assert_eq!(
+            parse("***bi***"),
+            [Node::Bold(vec![Node::Italic(vec![text("bi")])])]
+        );
     }
 
     #[test]
     fn styles_nest() {
         assert_eq!(
             parse("*a **b** c*"),
-            [Node::Italic(vec![text("a "), Node::Bold(vec![text("b")]), text(" c")])]
+            [Node::Italic(vec![
+                text("a "),
+                Node::Bold(vec![text("b")]),
+                text(" c")
+            ])]
         );
         assert_eq!(
             parse("||**x**||"),
@@ -363,20 +380,30 @@ mod tests {
     #[test]
     fn snake_case_is_not_italic() {
         assert_eq!(parse("my_var_name"), [text("my_var_name")]);
-        assert_eq!(parse("use _this_ one"), [text("use "), Node::Italic(vec![text("this")]), text(" one")]);
+        assert_eq!(
+            parse("use _this_ one"),
+            [text("use "), Node::Italic(vec![text("this")]), text(" one")]
+        );
     }
 
     #[test]
     fn escapes_make_delimiters_literal() {
         assert_eq!(parse(r"\*not italic\*"), [text("*not italic*")]);
-        assert_eq!(parse(r"a\b"), [text(r"a\b")], "only punctuation can be escaped");
+        assert_eq!(
+            parse(r"a\b"),
+            [text(r"a\b")],
+            "only punctuation can be escaped"
+        );
     }
 
     #[test]
     fn inline_code_is_not_parsed_inside() {
         assert_eq!(parse("`**x**`"), [Node::InlineCode("**x**".into())]);
         assert_eq!(parse("``a`b``"), [Node::InlineCode("a`b".into())]);
-        assert_eq!(parse("say `hi` now"), [text("say "), Node::InlineCode("hi".into()), text(" now")]);
+        assert_eq!(
+            parse("say `hi` now"),
+            [text("say "), Node::InlineCode("hi".into()), text(" now")]
+        );
     }
 
     #[test]
@@ -399,14 +426,24 @@ mod tests {
                 text("after"),
             ]
         );
-        assert_eq!(parse("```one line```"), [Node::CodeBlock { language: None, code: "one line".into() }]);
+        assert_eq!(
+            parse("```one line```"),
+            [Node::CodeBlock {
+                language: None,
+                code: "one line".into()
+            }]
+        );
     }
 
     #[test]
     fn quotes_headings_and_subtext() {
         assert_eq!(
             parse("> quoted\nnormal"),
-            [Node::Quote(vec![text("quoted")]), Node::LineBreak, text("normal")]
+            [
+                Node::Quote(vec![text("quoted")]),
+                Node::LineBreak,
+                text("normal")
+            ]
         );
         assert_eq!(
             parse("hi\n>>> all\nof this"),
@@ -416,7 +453,13 @@ mod tests {
                 Node::Quote(vec![text("all"), Node::LineBreak, text("of this")])
             ]
         );
-        assert_eq!(parse("## Title"), [Node::Heading { level: 2, children: vec![text("Title")] }]);
+        assert_eq!(
+            parse("## Title"),
+            [Node::Heading {
+                level: 2,
+                children: vec![text("Title")]
+            }]
+        );
         assert_eq!(parse("-# small"), [Node::Subtext(vec![text("small")])]);
         assert_eq!(parse("#hashtag"), [text("#hashtag")]);
     }
@@ -438,9 +481,19 @@ mod tests {
         );
         assert_eq!(
             parse("<a:party:99>"),
-            [Node::CustomEmoji { name: "party".into(), id: Snowflake(99), animated: true }]
+            [Node::CustomEmoji {
+                name: "party".into(),
+                id: Snowflake(99),
+                animated: true
+            }]
         );
-        assert_eq!(parse("<t:1700000000:R>"), [Node::Timestamp { unix: 1_700_000_000, style: Some('R') }]);
+        assert_eq!(
+            parse("<t:1700000000:R>"),
+            [Node::Timestamp {
+                unix: 1_700_000_000,
+                style: Some('R')
+            }]
+        );
         assert_eq!(parse("@everyone look"), [Node::Everyone, text(" look")]);
         assert_eq!(parse("a < b > c"), [text("a < b > c")]);
         assert_eq!(parse("<@notanid>"), [text("<@notanid>")]);
@@ -450,21 +503,35 @@ mod tests {
     fn links_drop_trailing_punctuation() {
         assert_eq!(
             parse("see https://example.com/a."),
-            [text("see "), Node::Link("https://example.com/a".into()), text(".")]
+            [
+                text("see "),
+                Node::Link("https://example.com/a".into()),
+                text(".")
+            ]
         );
         assert_eq!(
             parse("https://en.wikipedia.org/wiki/Rust_(programming_language)"),
-            [Node::Link("https://en.wikipedia.org/wiki/Rust_(programming_language)".into())]
+            [Node::Link(
+                "https://en.wikipedia.org/wiki/Rust_(programming_language)".into()
+            )]
         );
-        assert_eq!(parse("<https://quiet.example>"), [Node::Link("https://quiet.example".into())]);
+        assert_eq!(
+            parse("<https://quiet.example>"),
+            [Node::Link("https://quiet.example".into())]
+        );
         assert_eq!(parse("nothttps://x.y"), [text("nothttps://x.y")]);
     }
 
     #[test]
     fn non_ascii_text_is_safe() {
-        assert_eq!(parse("héllo **wörld** 🎉"), [text("héllo "), Node::Bold(vec![text("wörld")]), text(" 🎉")]);
+        assert_eq!(
+            parse("héllo **wörld** 🎉"),
+            [text("héllo "), Node::Bold(vec![text("wörld")]), text(" 🎉")]
+        );
         // Odd input must never panic.
-        for input in ["*", "**", "`", "```", "<", "<@", "||", "\\", "_", "~~~", "*🎉*", "_é_", "> ", ">>> "] {
+        for input in [
+            "*", "**", "`", "```", "<", "<@", "||", "\\", "_", "~~~", "*🎉*", "_é_", "> ", ">>> ",
+        ] {
             let _ = parse(input);
         }
     }
@@ -472,7 +539,9 @@ mod tests {
     #[test]
     fn never_panics_on_any_short_input() {
         // Every string up to 4 characters from the trickiest alphabet.
-        let alphabet = ['*', '_', '`', '|', '~', '<', '>', '@', '\\', 'a', 'é', '\n', '#', ' ', '-', 'h'];
+        let alphabet = [
+            '*', '_', '`', '|', '~', '<', '>', '@', '\\', 'a', 'é', '\n', '#', ' ', '-', 'h',
+        ];
         let mut inputs = vec![String::new()];
         for _ in 0..4 {
             let longer: Vec<String> = inputs

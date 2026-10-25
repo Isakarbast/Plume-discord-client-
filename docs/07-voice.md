@@ -11,7 +11,7 @@ UDP → decrypt → DAVE decrypt → jitter buffer (per SSRC) → Opus decode �
 
 ## Pieces
 - **Voice gateway (`voice_gateway.rs`):** a separate WebSocket. IDENTIFY → READY (ssrc, ip, port, modes) → IP discovery over UDP → SELECT_PROTOCOL → SESSION_DESCRIPTION. Speaking events, heartbeats.
-- **DAVE (`dave.rs`):** Discord's end-to-end encryption for voice, built on MLS. It's now required for most calls, so plan for it from day one. Evaluate wrapping Discord's open-source `libdave` rather than reimplementing MLS.
+- **DAVE (`dave.rs`):** Discord's end-to-end encryption for voice, built on MLS. It's now required for most calls, so plan for it from day one. Implemented with the pure-Rust [`davey`](https://crates.io/crates/davey) crate (MLS via OpenMLS), which avoids building Discord's C++ `libdave`.
 - **Audio I/O:** device selection, push-to-talk (needs a global hotkey: XDG GlobalShortcuts portal on Wayland), voice activity threshold, per-user volume.
 
 ## Out of scope at first

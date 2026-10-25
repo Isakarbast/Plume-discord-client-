@@ -25,7 +25,8 @@ pub struct Areas {
 const NARROW: u16 = 60;
 
 pub fn areas(screen: Rect, sidebar_focused: bool) -> Areas {
-    let [main, status] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(screen);
+    let [main, status] =
+        Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(screen);
 
     let (sidebar, chat) = if main.width < NARROW {
         if sidebar_focused {
@@ -35,7 +36,8 @@ pub fn areas(screen: Rect, sidebar_focused: bool) -> Areas {
         }
     } else {
         let width = (main.width / 3).clamp(20, 32);
-        let [sidebar, chat] = Layout::horizontal([Constraint::Length(width), Constraint::Fill(1)]).areas(main);
+        let [sidebar, chat] =
+            Layout::horizontal([Constraint::Length(width), Constraint::Fill(1)]).areas(main);
         (Some(sidebar), chat)
     };
 

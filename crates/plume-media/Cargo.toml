@@ -1,0 +1,16 @@
+[package]
+name = "plume-media"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+plume-core.workspace = true
+plume-rest.workspace = true
+image.workspace = true
+reqwest.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt", "sync"] }
+tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt"] }

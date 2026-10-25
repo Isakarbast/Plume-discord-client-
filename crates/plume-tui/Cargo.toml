@@ -10,9 +10,11 @@ path = "src/main.rs"
 
 [dependencies]
 plume-auth.workspace = true
+plume-cache.workspace = true
 plume-core.workspace = true
 plume-gateway.workspace = true
 plume-markdown.workspace = true
+plume-notify.workspace = true
 plume-rest.workspace = true
 chrono.workspace = true
 crossterm.workspace = true

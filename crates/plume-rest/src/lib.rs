@@ -7,6 +7,8 @@ mod client;
 mod errors;
 mod ratelimit;
 mod routes;
+mod upload;
 
-pub use client::{RestClient, USER_AGENT, build_http_client};
+pub use client::{Gif, Profile, ReplyTo, RestClient, USER_AGENT, build_http_client};
 pub use errors::RestError;
+pub use upload::{MAX_UPLOAD_BYTES, Upload};

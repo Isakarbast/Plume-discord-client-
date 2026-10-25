@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.plume.Plume</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Plume</name>
+  <summary>A lightweight native Discord client</summary>
+  <description>
+    <p>
+      Plume is a Discord client written in Rust with GTK 4 and libadwaita, without
+      Electron or an embedded browser. It uses a fraction of the memory of the official client.
+    </p>
+    <p>
+      Plume is not affiliated with Discord. Third-party clients are against Discord's
+      Terms of Service; use it at your own risk.
+    </p>
+  </description>
+  <launchable type="desktop-id">dev.plume.Plume.desktop</launchable>
+  <url type="homepage">https://github.com/Isakarbast/Plume-discord-client-</url>
+  <url type="bugtracker">https://github.com/Isakarbast/Plume-discord-client-/issues</url>
+  <developer id="dev.plume">
+    <name>Plume contributors</name>
+  </developer>
+  <content_rating type="oars-1.1">
+    <content_attribute id="social-chat">intense</content_attribute>
+  </content_rating>
+  <releases>
+    <release version="0.1.0" date="2026-10-25"/>
+  </releases>
+</component>

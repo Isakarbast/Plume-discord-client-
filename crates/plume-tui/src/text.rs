@@ -1,7 +1,9 @@
 //! Turns a channel's messages into wrapped, styled terminal lines.
 
+use std::ops::Range;
+
 use chrono::{DateTime, Local, TimeZone};
-use plume_core::models::Message;
+use plume_core::models::{Embed, Message, Reaction};
 use plume_core::{Snowflake, Store};
 use plume_markdown::{Piece, Style as MdStyle};
 use ratatui::style::{Color, Modifier, Style};
@@ -18,9 +20,20 @@ const GROUP_WINDOW_MS: u64 = 7 * 60 * 1000;
 const DIM: Style = Style::new().fg(Color::DarkGray);
 const CODE: Style = Style::new().fg(Color::Yellow);
 const MENTION: Style = Style::new().fg(Color::Cyan).add_modifier(Modifier::BOLD);
-const MENTION_ME: Style = Style::new().fg(Color::Black).bg(Color::Yellow).add_modifier(Modifier::BOLD);
-const LINK: Style = Style::new().fg(Color::Blue).add_modifier(Modifier::UNDERLINED);
+const MENTION_ME: Style = Style::new()
+    .fg(Color::Black)
+    .bg(Color::Yellow)
+    .add_modifier(Modifier::BOLD);
+const LINK: Style = Style::new()
+    .fg(Color::Blue)
+    .add_modifier(Modifier::UNDERLINED);
 const EMOJI: Style = Style::new().fg(Color::Magenta);
+const EMBED_BAR: Style = Style::new().fg(Color::Rgb(88, 101, 242));
+const SELECTED: Style = Style::new().bg(Color::Rgb(45, 48, 70));
+const REACTION: Style = Style::new().fg(Color::Gray).bg(Color::Rgb(40, 40, 48));
+const REACTION_MINE: Style = Style::new().fg(Color::White).bg(Color::Rgb(60, 70, 140));
+/// Long embed descriptions are cut to this many lines.
+const EMBED_LINES: usize = 6;
 
 /// Colours for usernames, picked by user ID so each person keeps theirs.
 const NAME_COLORS: [Color; 6] = [
@@ -32,38 +45,132 @@ const NAME_COLORS: [Color; 6] = [
     Color::LightCyan,
 ];
 
-/// Every line for a channel's cached messages, oldest first.
-pub fn channel_lines(store: &Store, channel_id: Snowflake, width: u16) -> Vec<Line<'static>> {
+/// A channel rendered to lines, plus which lines belong to which message
+/// (for selecting and scrolling to a message).
+pub struct ChannelView {
+    pub lines: Vec<Line<'static>>,
+    pub ranges: Vec<(Snowflake, Range<usize>)>,
+}
+
+/// Every line for a channel's cached messages, oldest first. The `selected`
+/// message gets a highlighted background.
+pub fn channel_lines(
+    store: &Store,
+    channel_id: Snowflake,
+    width: u16,
+    selected: Option<Snowflake>,
+) -> ChannelView {
     let width = usize::from(width).max(INDENT + 10);
     let mut lines = Vec::new();
+    let mut ranges = Vec::new();
     let mut previous: Option<&Message> = None;
 
     for message in store.messages(channel_id) {
         let time = local_time(message.timestamp_ms());
-        let new_day = previous.is_none_or(|p| local_time(p.timestamp_ms()).date_naive() != time.date_naive());
+        let new_day =
+            previous.is_none_or(|p| local_time(p.timestamp_ms()).date_naive() != time.date_naive());
         if new_day {
             lines.push(day_separator(&time, width));
         }
 
+        let start = lines.len();
         if let Some(reply_to) = message.reply_to {
             lines.push(reply_line(store, message.channel_id, reply_to, width));
         }
-
         let grouped = !new_day
             && message.reply_to.is_none()
             && previous.is_some_and(|p| {
-                p.author_id == message.author_id && message.timestamp_ms() - p.timestamp_ms() < GROUP_WINDOW_MS
+                p.author_id == message.author_id
+                    && message.timestamp_ms() - p.timestamp_ms() < GROUP_WINDOW_MS
             });
         if !grouped {
             lines.push(header_line(store, message, &time));
         }
-
         for logical in content_lines(store, message) {
             lines.extend(wrap(&logical, width, INDENT));
         }
+        for embed in &message.embeds {
+            for logical in embed_lines(embed) {
+                lines.extend(wrap(&logical, width, INDENT));
+            }
+        }
+        if !message.reactions.is_empty() {
+            lines.extend(wrap(&reaction_segments(&message.reactions), width, INDENT));
+        }
+
+        if selected == Some(message.id) {
+            for line in &mut lines[start..] {
+                line.style = line.style.patch(SELECTED);
+            }
+        }
+        ranges.push((message.id, start..lines.len()));
         previous = Some(message);
     }
+    ChannelView { lines, ranges }
+}
+
+/// A link preview as quoted lines. Previews with nothing to read (a bare
+/// image link, say) are skipped; the link is in the message already.
+fn embed_lines(embed: &Embed) -> Vec<Vec<Segment>> {
+    let bar = || ("▌ ".to_owned(), EMBED_BAR);
+    let mut lines = Vec::new();
+    if embed.title.is_none() && embed.description.is_none() && embed.fields.is_empty() {
+        return lines;
+    }
+    if let Some(provider) = &embed.provider {
+        lines.push(vec![bar(), (provider.clone(), DIM)]);
+    }
+    if let Some(author) = &embed.author {
+        lines.push(vec![
+            bar(),
+            (author.clone(), Style::new().add_modifier(Modifier::BOLD)),
+        ]);
+    }
+    if let Some(title) = &embed.title {
+        let style = if embed.url.is_some() {
+            LINK.add_modifier(Modifier::BOLD)
+        } else {
+            Style::new().add_modifier(Modifier::BOLD)
+        };
+        lines.push(vec![bar(), (title.clone(), style)]);
+    }
+    if let Some(description) = &embed.description {
+        let mut all = description.lines();
+        for line in all.by_ref().take(EMBED_LINES) {
+            lines.push(vec![bar(), (line.to_owned(), Style::new())]);
+        }
+        if all.next().is_some() {
+            lines.push(vec![bar(), ("…".to_owned(), DIM)]);
+        }
+    }
+    for (name, value) in &embed.fields {
+        lines.push(vec![
+            bar(),
+            (
+                format!("{name}: "),
+                Style::new().add_modifier(Modifier::BOLD),
+            ),
+            (value.clone(), Style::new()),
+        ]);
+    }
     lines
+}
+
+/// "[👍 3] [:pepe: 1]", with our own reactions highlighted.
+fn reaction_segments(reactions: &[Reaction]) -> Vec<Segment> {
+    let mut segments = Vec::new();
+    for (index, reaction) in reactions.iter().enumerate() {
+        if index > 0 {
+            segments.push((" ".to_owned(), Style::new()));
+        }
+        let label = match reaction.emoji.id {
+            Some(_) => format!(":{}:", reaction.emoji.name),
+            None => reaction.emoji.name.clone(),
+        };
+        let style = if reaction.me { REACTION_MINE } else { REACTION };
+        segments.push((format!(" {label} {} ", reaction.count), style));
+    }
+    segments
 }
 
 fn header_line(store: &Store, message: &Message, time: &DateTime<Local>) -> Line<'static> {
@@ -76,10 +183,17 @@ fn header_line(store: &Store, message: &Message, time: &DateTime<Local>) -> Line
     ])
 }
 
-fn reply_line(store: &Store, channel_id: Snowflake, reply_to: Snowflake, width: usize) -> Line<'static> {
+fn reply_line(
+    store: &Store,
+    channel_id: Snowflake,
+    reply_to: Snowflake,
+    width: usize,
+) -> Line<'static> {
     let text = match store.message(channel_id, reply_to) {
         Some(original) => {
-            let name = store.user(original.author_id).map_or("unknown", |u| u.display_name());
+            let name = store
+                .user(original.author_id)
+                .map_or("unknown", |u| u.display_name());
             let snippet: String = original.content.lines().next().unwrap_or("").to_owned();
             format!("╭ {name}: {snippet}")
         }
@@ -91,7 +205,10 @@ fn reply_line(store: &Store, channel_id: Snowflake, reply_to: Snowflake, width: 
 fn day_separator(time: &DateTime<Local>, width: usize) -> Line<'static> {
     let label = format!(" {} ", time.format("%a %-d %b %Y"));
     let side = width.saturating_sub(label.width()) / 2;
-    Line::from(Span::styled(format!("{}{label}{}", "─".repeat(side), "─".repeat(side)), DIM))
+    Line::from(Span::styled(
+        format!("{}{label}{}", "─".repeat(side), "─".repeat(side)),
+        DIM,
+    ))
 }
 
 /// The message body as logical lines: markdown, then attachments, then "(edited)".
@@ -129,14 +246,19 @@ fn content_lines(store: &Store, message: &Message) -> Vec<Vec<Segment>> {
                 current.push((format!("@{name}"), style));
             }
             Piece::ChannelMention(id) => {
-                let name = store.channel(id).and_then(|c| c.name.as_deref()).unwrap_or("unknown");
+                let name = store
+                    .channel(id)
+                    .and_then(|c| c.name.as_deref())
+                    .unwrap_or("unknown");
                 current.push((format!("#{name}"), MENTION));
             }
             Piece::RoleMention(_) => current.push(("@role".to_owned(), MENTION)),
             Piece::Everyone => current.push(("@everyone".to_owned(), MENTION_ME)),
             Piece::Here => current.push(("@here".to_owned(), MENTION_ME)),
             Piece::CustomEmoji { name, .. } => current.push((format!(":{name}:"), EMOJI)),
-            Piece::Timestamp { unix, style } => current.push((format_timestamp(unix, style), MENTION)),
+            Piece::Timestamp { unix, style } => {
+                current.push((format_timestamp(unix, style), MENTION))
+            }
             Piece::Link(url) => current.push((url.to_owned(), LINK)),
         }
     }
@@ -146,7 +268,14 @@ fn content_lines(store: &Store, message: &Message) -> Vec<Vec<Segment>> {
 
     for attachment in &message.attachments {
         lines.push(vec![
-            (format!("📎 {} ({}) ", attachment.filename, human_size(attachment.size)), DIM),
+            (
+                format!(
+                    "📎 {} ({}) ",
+                    attachment.filename,
+                    human_size(attachment.size)
+                ),
+                DIM,
+            ),
             (attachment.url.clone(), LINK),
         ]);
     }

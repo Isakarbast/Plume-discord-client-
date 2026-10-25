@@ -1,0 +1,29 @@
+[package]
+name = "plume-gtk"
+version.workspace = true
+edition.workspace = true
+description = "Plume's Standard/Full-tier desktop client (GTK4 + libadwaita)"
+
+[[bin]]
+name = "plume"
+path = "src/main.rs"
+
+[dependencies]
+plume-auth.workspace = true
+plume-cache.workspace = true
+plume-core.workspace = true
+plume-gateway.workspace = true
+plume-markdown.workspace = true
+plume-media.workspace = true
+plume-notify.workspace = true
+plume-rest.workspace = true
+plume-voice.workspace = true
+adw.workspace = true
+async-channel.workspace = true
+chrono.workspace = true
+gtk.workspace = true
+libc = "0.2"
+qrcode.workspace = true
+tokio = { workspace = true, features = ["fs", "rt-multi-thread", "sync", "time", "macros"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true

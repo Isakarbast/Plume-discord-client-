@@ -43,11 +43,21 @@ pub enum QrStatus {
 #[derive(Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case")]
 enum Incoming {
-    Hello { heartbeat_interval: u64 },
-    NonceProof { encrypted_nonce: String },
-    PendingRemoteInit { fingerprint: String },
-    PendingTicket { encrypted_user_payload: String },
-    PendingLogin { ticket: String },
+    Hello {
+        heartbeat_interval: u64,
+    },
+    NonceProof {
+        encrypted_nonce: String,
+    },
+    PendingRemoteInit {
+        fingerprint: String,
+    },
+    PendingTicket {
+        encrypted_user_payload: String,
+    },
+    PendingLogin {
+        ticket: String,
+    },
     HeartbeatAck,
     Cancel,
     #[serde(other)]
@@ -59,9 +69,10 @@ enum Incoming {
 pub async fn qr_login(mut on_status: impl FnMut(QrStatus)) -> Result<Token, AuthError> {
     // The gateway refuses connections that don't look like they come from discord.com.
     let mut request = REMOTE_AUTH_URL.into_client_request()?;
-    request
-        .headers_mut()
-        .insert("Origin", "https://discord.com".parse().expect("valid header"));
+    request.headers_mut().insert(
+        "Origin",
+        "https://discord.com".parse().expect("valid header"),
+    );
     let (mut socket, _) = tokio_tungstenite::connect_async(request).await?;
 
     // Generating an RSA key takes real CPU time, so keep it off the async threads.
@@ -70,7 +81,10 @@ pub async fn qr_login(mut on_status: impl FnMut(QrStatus)) -> Result<Token, Auth
         .map_err(|e| AuthError::Protocol(format!("key generation crashed: {e}")))??;
 
     // Placeholder until HELLO tells us the real interval.
-    let mut ticker = interval_at(Instant::now() + Duration::from_secs(3600), Duration::from_secs(3600));
+    let mut ticker = interval_at(
+        Instant::now() + Duration::from_secs(3600),
+        Duration::from_secs(3600),
+    );
 
     loop {
         let message = tokio::select! {
@@ -107,10 +121,13 @@ pub async fn qr_login(mut on_status: impl FnMut(QrStatus)) -> Result<Token, Auth
                     .to_public_key()
                     .to_public_key_der()
                     .map_err(|e| AuthError::Protocol(format!("couldn't encode public key: {e}")))?;
-                send(&mut socket, json!({
-                    "op": "init",
-                    "encoded_public_key": STANDARD.encode(public_key.as_bytes()),
-                }))
+                send(
+                    &mut socket,
+                    json!({
+                        "op": "init",
+                        "encoded_public_key": STANDARD.encode(public_key.as_bytes()),
+                    }),
+                )
                 .await?;
             }
             Incoming::NonceProof { encrypted_nonce } => {
@@ -123,10 +140,17 @@ pub async fn qr_login(mut on_status: impl FnMut(QrStatus)) -> Result<Token, Auth
                     url: format!("https://discord.com/ra/{fingerprint}"),
                 });
             }
-            Incoming::PendingTicket { encrypted_user_payload } => {
+            Incoming::PendingTicket {
+                encrypted_user_payload,
+            } => {
                 // Decrypts to "id:discriminator:avatar:username".
-                let payload = String::from_utf8_lossy(&decrypt(&key, &encrypted_user_payload)?).into_owned();
-                let username = payload.splitn(4, ':').nth(3).unwrap_or("someone").to_owned();
+                let payload =
+                    String::from_utf8_lossy(&decrypt(&key, &encrypted_user_payload)?).into_owned();
+                let username = payload
+                    .splitn(4, ':')
+                    .nth(3)
+                    .unwrap_or("someone")
+                    .to_owned();
                 on_status(QrStatus::Scanned { username });
             }
             Incoming::PendingLogin { ticket } => {
@@ -192,9 +216,16 @@ mod tests {
 
     #[test]
     fn parses_remote_auth_messages() {
-        let hello: Incoming =
-            serde_json::from_str(r#"{"op":"hello","heartbeat_interval":41250,"timeout_ms":120000}"#).unwrap();
-        assert!(matches!(hello, Incoming::Hello { heartbeat_interval: 41250 }));
+        let hello: Incoming = serde_json::from_str(
+            r#"{"op":"hello","heartbeat_interval":41250,"timeout_ms":120000}"#,
+        )
+        .unwrap();
+        assert!(matches!(
+            hello,
+            Incoming::Hello {
+                heartbeat_interval: 41250
+            }
+        ));
 
         let nonce: Incoming =
             serde_json::from_str(r#"{"op":"nonce_proof","encrypted_nonce":"abc"}"#).unwrap();

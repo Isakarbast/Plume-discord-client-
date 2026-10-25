@@ -1,0 +1,37 @@
+# Arch User Repository package.
+pkgname=plume-discord
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="A lightweight native Discord client (GTK4 + terminal)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/Isakarbast/Plume-discord-client-"
+license=('GPL-3.0-or-later')
+depends=('gtk4' 'libadwaita' 'alsa-lib')
+makedepends=('cargo' 'cmake')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+prepare() {
+  cd "Plume-discord-client--$pkgver"
+  cargo fetch --locked
+}
+
+build() {
+  cd "Plume-discord-client--$pkgver"
+  cargo build --frozen --release -p plume-gtk
+  cargo build --frozen --profile feather -p plume-tui
+}
+
+check() {
+  cd "Plume-discord-client--$pkgver"
+  cargo test --frozen --workspace --exclude plume-gtk
+}
+
+package() {
+  cd "Plume-discord-client--$pkgver"
+  install -Dm755 target/release/plume "$pkgdir/usr/bin/plume"
+  install -Dm755 target/feather/plume-tui "$pkgdir/usr/bin/plume-tui"
+  install -Dm644 packaging/dev.plume.Plume.desktop "$pkgdir/usr/share/applications/dev.plume.Plume.desktop"
+  install -Dm644 packaging/dev.plume.Plume.metainfo.xml "$pkgdir/usr/share/metainfo/dev.plume.Plume.metainfo.xml"
+  install -Dm644 assets/icons/dev.plume.Plume.svg "$pkgdir/usr/share/icons/hicolor/scalable/apps/dev.plume.Plume.svg"
+}

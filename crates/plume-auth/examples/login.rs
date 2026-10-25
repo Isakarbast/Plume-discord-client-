@@ -23,19 +23,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    if tokio::task::spawn_blocking(keyring::load_token).await??.is_some() {
+    if tokio::task::spawn_blocking(keyring::load_token)
+        .await??
+        .is_some()
+    {
         println!("Already logged in (token is in the keyring).");
         println!("Run with `-- --logout` to remove it.");
         return Ok(());
     }
 
     let token = if has_flag("--token") {
-        token_from_env().ok_or("DISCORD_TOKEN is not set. Run: read -rs DISCORD_TOKEN && export DISCORD_TOKEN")?
+        token_from_env().ok_or(
+            "DISCORD_TOKEN is not set. Run: read -rs DISCORD_TOKEN && export DISCORD_TOKEN",
+        )?
     } else {
         match login_with_qr().await {
             Ok(token) => token,
             Err(AuthError::CaptchaRequired) => {
-                eprintln!("Discord wants a captcha for QR logins right now, and Plume doesn't solve those.");
+                eprintln!(
+                    "Discord wants a captcha for QR logins right now, and Plume doesn't solve those."
+                );
                 eprintln!("Use the token method instead (see the README), then run:");
                 eprintln!("  cargo run -p plume-auth --example login -- --token");
                 std::process::exit(1);

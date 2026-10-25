@@ -5,8 +5,13 @@ members = [
     "crates/plume-gateway",
     "crates/plume-rest",
     "crates/plume-markdown",
+    "crates/plume-cache",
+    "crates/plume-media",
     "crates/plume-auth",
+    "crates/plume-notify",
     "crates/plume-tui",
+    "crates/plume-gtk",
+    "crates/plume-voice",
 ]
 
 # Shared settings every crate inherits with `version.workspace = true` etc.
@@ -21,17 +26,29 @@ plume-gateway = { path = "crates/plume-gateway" }
 plume-auth = { path = "crates/plume-auth" }
 plume-rest = { path = "crates/plume-rest" }
 plume-markdown = { path = "crates/plume-markdown" }
+plume-notify = { path = "crates/plume-notify" }
+plume-cache = { path = "crates/plume-cache" }
+plume-media = { path = "crates/plume-media" }
+plume-voice = { path = "crates/plume-voice" }
 
+adw = { version = "0.9", package = "libadwaita", features = ["v1_6"] }
+async-channel = "2.5"
 base64 = "0.23"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 crossterm = { version = "0.29", features = ["event-stream"] }
 flate2 = "1.1"
+gtk = { version = "0.11", package = "gtk4", features = ["v4_14"] }
+# Only the formats Discord serves, to keep the binary small.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp"] }
 futures-util = { version = "0.3", default-features = false, features = ["std", "sink"] }
 keyring = "4.2"
+notify-rust = "4.18"
 qrcode = { version = "0.14", default-features = false }
 ratatui = "0.30"
-reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json", "http2"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "json", "http2", "multipart"] }
 rsa = { version = "0.9", features = ["sha2", "getrandom"] }
+# SQLite compiled in, so no system library is needed.
+rusqlite = { version = "0.41", features = ["bundled"] }
 # Only the `ring` crypto backend, so rustls can pick it automatically.
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1", features = ["derive"] }
@@ -47,6 +64,13 @@ unicode-width = "0.2"
 lto = true
 codegen-units = 1
 strip = true
+
+# `cargo build --profile feather`: smallest binary for the Feather tier
+# (docs/11-usage-profiles.md). The panic hook still restores the terminal.
+[profile.feather]
+inherits = "release"
+opt-level = "s"
+panic = "abort"
 
 # RSA key generation is painfully slow unoptimised, even in debug builds.
 [profile.dev.package.rsa]

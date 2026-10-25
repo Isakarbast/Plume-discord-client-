@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Plume
+GenericName=Discord Client
+Comment=A lightweight native Discord client
+Exec=plume
+Icon=dev.plume.Plume
+Terminal=false
+Categories=Network;Chat;InstantMessaging;GTK;
+Keywords=discord;chat;messages;
+StartupNotify=true
+SingleMainWindow=true
